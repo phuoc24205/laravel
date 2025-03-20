@@ -1,3 +1,5 @@
+
+
 -- 1. Liệt kê hóa đơn của khách hàng (mã user, tên user, mã hóa đơn)
 SELECT users.user_id, users.user_name, orders.order_id 
 FROM users 
@@ -47,34 +49,25 @@ JOIN order_details ON orders.order_id = order_details.order_id
 GROUP BY users.user_id, users.user_name, orders.order_id;
 
 -- 8. Mỗi user chỉ chọn ra 1 đơn hàng có giá trị lớn nhất
-SELECT user_id, user_name, order_id, total_price FROM (
-    SELECT users.user_id, users.user_name, orders.order_id, 
-           SUM(order_details.price * order_details.quantity) AS total_price,
-           RANK() OVER (PARTITION BY users.user_id ORDER BY SUM(order_details.price * order_details.quantity) DESC) AS rnk
-    FROM users 
-    JOIN orders ON users.user_id = orders.user_id
-    JOIN order_details ON orders.order_id = order_details.order_id
-    GROUP BY users.user_id, users.user_name, orders.order_id
-) ranked WHERE rnk = 1;
+SELECT users.user_id, users.user_name, orders.order_id, SUM(order_details.price * order_details.quantity) AS total_price
+FROM users 
+JOIN orders ON users.user_id = orders.user_id
+JOIN order_details ON orders.order_id = order_details.order_id
+GROUP BY users.user_id, users.user_name, orders.order_id
+HAVING total_price = (SELECT MAX(total_price) FROM (SELECT orders.user_id, SUM(order_details.price * order_details.quantity) AS total_price FROM orders JOIN order_details ON orders.order_id = order_details.order_id GROUP BY orders.user_id, orders.order_id) AS subquery);
 
 -- 9. Mỗi user chỉ chọn ra 1 đơn hàng có giá trị nhỏ nhất
-SELECT user_id, user_name, order_id, total_price FROM (
-    SELECT users.user_id, users.user_name, orders.order_id, 
-           SUM(order_details.price * order_details.quantity) AS total_price,
-           RANK() OVER (PARTITION BY users.user_id ORDER BY SUM(order_details.price * order_details.quantity) ASC) AS rnk
-    FROM users 
-    JOIN orders ON users.user_id = orders.user_id
-    JOIN order_details ON orders.order_id = order_details.order_id
-    GROUP BY users.user_id, users.user_name, orders.order_id
-) ranked WHERE rnk = 1;
+SELECT users.user_id, users.user_name, orders.order_id, SUM(order_details.price * order_details.quantity) AS total_price
+FROM users 
+JOIN orders ON users.user_id = orders.user_id
+JOIN order_details ON orders.order_id = order_details.order_id
+GROUP BY users.user_id, users.user_name, orders.order_id
+HAVING total_price = (SELECT MIN(total_price) FROM (SELECT orders.user_id, SUM(order_details.price * order_details.quantity) AS total_price FROM orders JOIN order_details ON orders.order_id = order_details.order_id GROUP BY orders.user_id, orders.order_id) AS subquery);
 
--- 10. Mỗi user chỉ chọn ra 1 đơn hàng có số sản phẩm nhiều nhất
-SELECT user_id, user_name, order_id, total_products FROM (
-    SELECT users.user_id, users.user_name, orders.order_id, 
-           COUNT(order_details.product_id) AS total_products,
-           RANK() OVER (PARTITION BY users.user_id ORDER BY COUNT(order_details.product_id) DESC) AS rnk
-    FROM users 
-    JOIN orders ON users.user_id = orders.user_id
-    JOIN order_details ON orders.order_id = order_details.order_id
-    GROUP BY users.user_id, users.user_name, orders.order_id
-) ranked WHERE rnk = 1;
+-- 10. Mỗi user chỉ chọn ra 1 đơn hàng có số sản phẩm là nhiều nhất
+SELECT users.user_id, users.user_name, orders.order_id, COUNT(order_details.product_id) AS total_products
+FROM users 
+JOIN orders ON users.user_id = orders.user_id
+JOIN order_details ON orders.order_id = order_details.order_id
+GROUP BY users.user_id, users.user_name, orders.order_id
+HAVING total_products = (SELECT MAX(total_products) FROM (SELECT orders.user_id, COUNT(order_details.product_id) AS total_products FROM orders JOIN order_details ON orders.order_id = order_details.order_id GROUP BY orders.user_id, orders.order_id) AS subquery);
